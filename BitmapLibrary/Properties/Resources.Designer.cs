@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace BMPLoaderNew.Properties {
+namespace BitmapLibrary.Properties {
     using System;
     
     

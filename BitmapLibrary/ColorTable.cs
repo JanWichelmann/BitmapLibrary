@@ -2,7 +2,7 @@
 using System;
 using System.Drawing;
 
-namespace BMPLoaderNew
+namespace BitmapLibrary
 {
 	/// <summary>
 	/// Definiert eine 8-Bit-Bitmap-Farbtabelle (256 Einträge). Der Alpha-Wert wird dabei grundsätzlich ignoriert.

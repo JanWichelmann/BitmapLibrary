@@ -2,12 +2,12 @@
 using System;
 using System.Drawing;
 
-namespace BMPLoaderNew
+namespace BitmapLibrary
 {
 	/// <summary>
 	/// Definiert einen Ladealgorithmus für unkomprimierte Bitmaps. Unterstützt werden die Bitzahlen 8 und 24, wobei immer auf 8-Bit reduziert wird. Ausgegeben werden nur Bottom-Up-Bitmaps.
 	/// </summary>
-	public class BMPLoader
+	public class BitmapLoader
 	{
 		/// <summary>
 		/// Der Puffer für zu lesende bzw. zu schreibende Daten.
@@ -40,7 +40,7 @@ namespace BMPLoaderNew
 		/// <param name="width">Die Breite des zu erstellenden Bitmaps.</param>
 		/// <param name="height">Die Höhe des zu erstellenden Bitmaps.</param>
 		/// <param name="pal">Optional. Gibt die zu verwendende 256er-Farbtabelle an. Standardwert ist die 50500er-Farbtabelle.</param>
-		public BMPLoader(int width, int height, JASCPalette pal = null)
+		public BitmapLoader(int width, int height, JASCPalette pal = null)
 		{
 			// Header initialisieren
 			_header = new Header();
@@ -53,7 +53,7 @@ namespace BMPLoaderNew
 				// Standard-Farbpalettenreader abrufen
 				JASCPalette tempPal;
 				if(pal == null)
-					tempPal = new JASCPalette(new RAMBuffer(BMPLoaderNew.Properties.Resources.pal50500));
+					tempPal = new JASCPalette(new RAMBuffer(BitmapLibrary.Properties.Resources.pal50500));
 				else
 					tempPal = pal;
 
@@ -93,7 +93,7 @@ namespace BMPLoaderNew
 		/// </summary>
 		/// <param name="filename">Der Pfad zur zu ladenden Bitmap-Datei.</param>
 		/// <param name="pal">Optional. Gibt die zu verwendende 256er-Farbtabelle an. Sonst wird die entweder die im Bitmap angegebene oder die 50500er-Farbtabelle verwendet.</param>
-		public BMPLoader(string filename, JASCPalette pal = null)
+		public BitmapLoader(string filename, JASCPalette pal = null)
 		{
 			// Datei laden
 			_buffer = new RAMBuffer(filename);
@@ -254,7 +254,7 @@ namespace BMPLoaderNew
 					// Farbpalettenreader abrufen
 					JASCPalette tempPal;
 					if(pal == null)
-						tempPal = new JASCPalette(new RAMBuffer(BMPLoaderNew.Properties.Resources.pal50500));
+						tempPal = new JASCPalette(new RAMBuffer(BitmapLibrary.Properties.Resources.pal50500));
 					else
 						tempPal = pal;
 

@@ -6,7 +6,7 @@ using System.Drawing.Imaging;
 /// Repräsentiert eine Farbpalette (JASC *.pal-Format)
 /// </summary>
 /// <remarks></remarks>
-namespace BMPLoaderNew
+namespace BitmapLibrary
 {
 	public class JASCPalette
 	{
