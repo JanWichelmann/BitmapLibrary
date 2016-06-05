@@ -39,8 +39,8 @@ namespace BitmapLibrary
 		/// </summary>
 		/// <param name="width">Die Breite des zu erstellenden Bitmaps.</param>
 		/// <param name="height">Die Höhe des zu erstellenden Bitmaps.</param>
-		/// <param name="pal">Optional. Gibt die zu verwendende 256er-Farbtabelle an. Standardwert ist die 50500er-Farbtabelle.</param>
-		public BitmapLoader(int width, int height, JASCPalette pal = null)
+		/// <param name="pal">Gibt die zu verwendende 256er-Farbtabelle an. Standardwert ist die 50500er-Farbtabelle.</param>
+		public BitmapLoader(int width, int height, ColorTable pal)
 		{
 			// Header initialisieren
 			_header = new Header();
@@ -48,41 +48,7 @@ namespace BitmapLibrary
 			_header.width = Math.Abs(width);
 
 			// Farbtabelle initialisieren
-			if(pal == null)
-			{
-				// Standard-Farbpalettenreader abrufen
-				JASCPalette tempPal;
-				if(pal == null)
-					tempPal = new JASCPalette(new RAMBuffer(BitmapLibrary.Properties.Resources.pal50500));
-				else
-					tempPal = pal;
-
-				// Farbpaletteninhalt in eigene Farbtabelle schreiben
-				_colorTable = new ColorTable();
-				for(int i = 0; i < tempPal._farben.GetLength(0); i++)
-				{
-					// Eintrag in Tabelle einfügen
-					_colorTable[i] = Color.FromArgb(tempPal._farben[i, 0], tempPal._farben[i, 1], tempPal._farben[i, 2]);
-
-					// Sicherheitshalber bei i = 255 abbrechen (falls Palette zu groß sein sollte)
-					if(i == 255)
-						break;
-				}
-			}
-			else
-			{
-				// Benutzerdefinierten Farbpaletteninhalt in eigene Farbtabelle schreiben
-				_colorTable = new ColorTable();
-				for(int i = 0; i < pal._farben.GetLength(0); i++)
-				{
-					// Eintrag in Tabelle einfügen
-					_colorTable[i] = Color.FromArgb(pal._farben[i, 0], pal._farben[i, 1], pal._farben[i, 2]);
-
-					// Sicherheitshalber bei i = 255 abbrechen (falls Palette zu groß sein sollte)
-					if(i == 255)
-						break;
-				}
-			}
+			_colorTable = pal;
 
 			// Bilddaten-Array initialisieren
 			_imageData = new byte[_header.width * _header.height];
