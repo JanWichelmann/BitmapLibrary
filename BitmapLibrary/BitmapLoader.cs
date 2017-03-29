@@ -10,11 +10,6 @@ namespace BitmapLibrary
 	public class BitmapLoader
 	{
 		/// <summary>
-		/// Der Puffer für zu lesende bzw. zu schreibende Daten.
-		/// </summary>
-		private RAMBuffer _buffer;
-
-		/// <summary>
 		/// Der Bitmap-Header.
 		/// </summary>
 		private Header _header;
@@ -59,28 +54,46 @@ namespace BitmapLibrary
 		/// </summary>
 		/// <param name="filename">Der Pfad zur zu ladenden Bitmap-Datei.</param>
 		/// <param name="pal">Optional. Gibt die zu verwendende 256er-Farbtabelle an. Sonst wird die entweder die im Bitmap angegebene oder die 50500er-Farbtabelle verwendet.</param>
-		public BitmapLoader(string filename, JASCPalette pal = null)
-		{
-			// Datei laden
-			_buffer = new RAMBuffer(filename);
+		/// <param name="readFileHeader">Optional. Gibt an, ob der Dateiheader gelesen werden oder direkt mit der BITMAPINFOHEADER-Struktur begonnen werden soll.</param>
+		public BitmapLoader(string filename, JASCPalette pal = null, bool readFileHeader = true)
+			: this(new RAMBuffer(filename), pal, readFileHeader) { }
 
+
+		/// <summary>
+		/// Lädt die Bitmap-Datei aus dem angegebenen Puffer.
+		/// </summary>
+		/// <param name="buffer">Der Puffer, aus dem die Bitmap-Datei gelesen werden soll.</param>
+		/// <param name="pal">Optional. Gibt die zu verwendende 256er-Farbtabelle an. Sonst wird die entweder die im Bitmap angegebene oder die 50500er-Farbtabelle verwendet.</param>
+		/// <param name="readFileHeader">Optional. Gibt an, ob der Dateiheader gelesen werden oder direkt mit der BITMAPINFOHEADER-Struktur begonnen werden soll.</param>
+		public BitmapLoader(RAMBuffer buffer, JASCPalette pal = null, bool readFileHeader = true)
+		{
 			// Header laden
 			_header = new Header();
-			_header.type = ReadUShort();
-			_header.fileSize = ReadUInteger();
-			_header.reserved = ReadUInteger();
-			_header.offsetData = ReadUInteger();
-			_header.imageHeaderSize = ReadUInteger();
-			_header.width = ReadInteger();
-			_header.height = ReadInteger();
-			_header.layerCount = ReadUShort();
-			_header.bitsPerPixel = ReadUShort();
-			_header.compression = ReadUInteger();
-			_header.size = ReadUInteger();
-			_header.xDPI = ReadInteger();
-			_header.yDPI = ReadInteger();
-			_header.colorCount = ReadUInteger();
-			_header.colorImportantCount = ReadUInteger();
+			if(readFileHeader)
+			{
+				_header.type = buffer.ReadUShort();
+				_header.fileSize = buffer.ReadUInteger();
+				_header.reserved = buffer.ReadUInteger();
+				_header.offsetData = buffer.ReadUInteger();
+			}
+			else
+			{
+				_header.type = 0x424D;
+				_header.fileSize = 0;
+				_header.reserved = 0;
+				_header.offsetData = 54;
+			}
+			_header.imageHeaderSize = buffer.ReadUInteger();
+			_header.width = buffer.ReadInteger();
+			_header.height = buffer.ReadInteger();
+			_header.layerCount = buffer.ReadUShort();
+			_header.bitsPerPixel = buffer.ReadUShort();
+			_header.compression = buffer.ReadUInteger();
+			_header.size = buffer.ReadUInteger();
+			_header.xDPI = buffer.ReadInteger();
+			_header.yDPI = buffer.ReadInteger();
+			_header.colorCount = buffer.ReadUInteger();
+			_header.colorImportantCount = buffer.ReadUInteger();
 
 			// Farbtabellenanzahl nachjustieren
 			if(_header.colorCount == 0 && _header.bitsPerPixel == 8)
@@ -91,7 +104,7 @@ namespace BitmapLibrary
 			if(_header.colorCount > 0)
 			{
 				// Bildfarbtabelle laden
-				_colorTable = new ColorTable(ref _buffer, _header.colorCount);
+				_colorTable = new ColorTable(ref buffer, _header.colorCount);
 
 				// Falls eine Palette übergeben wurde, diese mit der Bildtabelle vergleichen
 				if(pal == null || pal._farben.GetLength(0) != 256)
@@ -127,7 +140,7 @@ namespace BitmapLibrary
 				}
 
 				// Binäre Original-Bilddaten einlesen
-				_imageDataBin = _buffer.ReadByteArray(width2 * Math.Abs(_header.height));
+				_imageDataBin = buffer.ReadByteArray(width2 * Math.Abs(_header.height));
 
 				// Neues Bilddaten-Array anlegen (ohne Füllbytes)
 				_imageData = new byte[width * Math.Abs(_header.height)];
@@ -246,7 +259,7 @@ namespace BitmapLibrary
 				}
 
 				// Binäre Original-Bilddaten einlesen
-				_imageDataBin = _buffer.ReadByteArray((3 * width + fillBytes) * Math.Abs(_header.height));
+				_imageDataBin = buffer.ReadByteArray((3 * width + fillBytes) * Math.Abs(_header.height));
 
 				// Neues Bilddaten-Array anlegen (ohne Füllbytes)
 				_imageData = new byte[width * Math.Abs(_header.height)];
@@ -316,17 +329,18 @@ namespace BitmapLibrary
 					}
 
 					// Ggf. Füllbytes überspringen (bei Dateiende nicht)
-					if(_buffer.Position < _buffer.Length - fillBytes)
-						_buffer.Position = (_buffer.Position + fillBytes);
+					if(buffer.Position < buffer.Length - fillBytes)
+						buffer.Position = (buffer.Position + fillBytes);
 				}
 			}
 		}
-
+		
 		/// <summary>
-		/// Speichert die enthaltene Bitmap in die angegebene Datei.
-		/// </summary>
-		/// <param name="filename">Die Datei, in die das Bild gespeichert werden soll.</param>
-		public void saveToFile(string filename)
+		 /// Speichert die enthaltene Bitmap in den angegebenen Puffer.
+		 /// </summary>
+		 /// <param name="buffer">Der Puffer, in den das Bild gespeichert werden soll.</param>
+		 /// <param name="writeFileHeader">Optional. Gibt an, ob der Dateiheader geschrieben werden oder direkt mit der BITMAPINFOHEADER-Struktur begonnen werden soll.</param>
+		public void SaveToBuffer(RAMBuffer buffer, bool writeFileHeader = true)
 		{
 			// Bilddatenbreite ggf. auf ein Vielfaches von 4 Bytes erhöhen
 			int width = _header.width; // Hilfsvariable zur Performanceerhöhung (immer gleichwertig mit _header.width)
@@ -375,34 +389,46 @@ namespace BitmapLibrary
 			_header.colorCount = 0;
 			_header.colorImportantCount = 0;
 
-			// Puffer-Objekt erstellen
-			_buffer = new RAMBuffer();
-
 			// Header schreiben
-			WriteUShort(_header.type);
-			WriteUInteger(_header.fileSize);
-			WriteUInteger(_header.reserved);
-			WriteUInteger(_header.offsetData);
-			WriteUInteger(_header.imageHeaderSize);
-			WriteInteger(_header.width);
-			WriteInteger(_header.height);
-			WriteUShort(_header.layerCount);
-			WriteUShort(_header.bitsPerPixel);
-			WriteUInteger(_header.compression);
-			WriteUInteger(_header.size);
-			WriteInteger(_header.xDPI);
-			WriteInteger(_header.yDPI);
-			WriteUInteger(_header.colorCount);
-			WriteUInteger(_header.colorImportantCount);
+			if(writeFileHeader)
+			{
+				buffer.WriteUShort(_header.type);
+				buffer.WriteUInteger(_header.fileSize);
+				buffer.WriteUInteger(_header.reserved);
+				buffer.WriteUInteger(_header.offsetData);
+			}
+			buffer.WriteUInteger(_header.imageHeaderSize);
+			buffer.WriteInteger(_header.width);
+			buffer.WriteInteger(_header.height);
+			buffer.WriteUShort(_header.layerCount);
+			buffer.WriteUShort(_header.bitsPerPixel);
+			buffer.WriteUInteger(_header.compression);
+			buffer.WriteUInteger(_header.size);
+			buffer.WriteInteger(_header.xDPI);
+			buffer.WriteInteger(_header.yDPI);
+			buffer.WriteUInteger(_header.colorCount);
+			buffer.WriteUInteger(_header.colorImportantCount);
 
 			// Farbtabelle schreiben
-			_colorTable.ToBinary(ref _buffer);
+			_colorTable.ToBinary(ref buffer);
 
 			// Bilddaten schreiben
-			WriteBytes(_imageDataBin);
+			buffer.Write(_imageDataBin);
+		}
 
-			// Bitmap schreiben
-			_buffer.Save(filename);
+		/// <summary>
+		/// Speichert die enthaltene Bitmap in die angegebene Datei.
+		/// </summary>
+		/// <param name="filename">Die Datei, in die das Bild gespeichert werden soll.</param>
+		/// <param name="writeFileHeader">Optional. Gibt an, ob der Dateiheader geschrieben werden oder direkt mit der BITMAPINFOHEADER-Struktur begonnen werden soll.</param>
+		public void SaveToFile(string filename, bool writeFileHeader = true)
+		{
+			// Puffer-Objekt erstellen und Daten hineinschreiben
+			RAMBuffer buffer = new RAMBuffer();
+			SaveToBuffer(buffer, writeFileHeader);
+
+			// Als Datei speichern
+			buffer.Save(filename);
 		}
 
 		/// <summary>
@@ -481,111 +507,6 @@ namespace BitmapLibrary
 				return Math.Abs(_header.height);
 			}
 		}
-
-		#region Hilfsfunktionen
-
-		// Die folgenden Funktionen sind Abkürzungen, in C++ wären dies Makros.
-
-		#region Lesen
-
-		/// <summary>
-		/// Gibt genau ein Byte aus DataBuffer zurück.
-		/// </summary>
-		/// <returns></returns>
-		/// <remarks></remarks>
-		private byte ReadByte()
-		{
-			return _buffer.ReadByte();
-		}
-
-		/// <summary>
-		/// Gibt ein Byte-Array aus DataBuffer zurück.
-		/// </summary>
-		/// <param name="Anzahl">Die Anzahl der auszulesenden Bytes.</param>
-		/// <returns></returns>
-		/// <remarks></remarks>
-		private byte[] ReadBytes(uint Anzahl)
-		{
-			return _buffer.ReadByteArray((int)Anzahl);
-		}
-
-		/// <summary>
-		/// Gibt genau einen UShort-Wert aus DataBuffer zurück.
-		/// </summary>
-		/// <returns></returns>
-		/// <remarks></remarks>
-		private ushort ReadUShort()
-		{
-			return _buffer.ReadUShort();
-		}
-
-		/// <summary>
-		/// Gibt genau einen Integer-Wert aus DataBuffer zurück.
-		/// </summary>
-		/// <returns></returns>
-		/// <remarks></remarks>
-		private int ReadInteger()
-		{
-			return _buffer.ReadInteger();
-		}
-
-		/// <summary>
-		/// Gibt genau einen UInteger-Wert aus DataBuffer zurück.
-		/// </summary>
-		/// <returns></returns>
-		/// <remarks></remarks>
-		private uint ReadUInteger()
-		{
-			return _buffer.ReadUInteger();
-		}
-
-		#endregion Lesen
-
-		#region Schreiben
-
-		/// <summary>
-		/// Schreibt ein Byte-Array an das Ende des Puffers.
-		/// </summary>
-		/// <param name="Wert">Das zu schreibende Byte-Array.</param>
-		/// <remarks></remarks>
-		private void WriteBytes(byte[] Wert)
-		{
-			_buffer.Write(Wert);
-		}
-
-		/// <summary>
-		/// Schreibt einen UShort-Wert an das Ende des Puffers.
-		/// </summary>
-		/// <param name="Wert">Der zu schreibende Wert.</param>
-		/// <remarks></remarks>
-		private void WriteUShort(ushort Wert)
-		{
-			_buffer.WriteUShort(Wert);
-		}
-
-		/// <summary>
-		/// Schreibt einen Integer-Wert an das Ende des Puffers.
-		/// </summary>
-		/// <param name="Wert">Der zu schreibende Wert.</param>
-		/// <remarks></remarks>
-		private void WriteInteger(int Wert)
-		{
-			_buffer.WriteInteger(Wert);
-		}
-
-		/// <summary>
-		/// Schreibt einen UInteger-Wert an das Ende des Puffers.
-		/// </summary>
-		/// <param name="Wert">Der zu schreibende Wert.</param>
-		/// <remarks></remarks>
-		private void WriteUInteger(uint Wert)
-		{
-			_buffer.WriteUInteger(Wert);
-		}
-
-		#endregion Schreiben
-
-		#endregion Hilfsfunktionen
 
 		#region Strukturen
 
