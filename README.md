@@ -1,0 +1,1 @@
+This library allows reading and writing 8-bit bitmaps, supporting 8-bit JASC palette files.
